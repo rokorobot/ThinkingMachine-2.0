@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+pyyaml
+openai
+sqlalchemy
+psycopg2-binary
+requests
+numpy

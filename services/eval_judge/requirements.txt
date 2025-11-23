@@ -1,0 +1,2 @@
+openai
+psycopg2-binary

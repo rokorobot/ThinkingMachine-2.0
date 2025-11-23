@@ -1,0 +1,132 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    env_file:
+      - ./env/db.env
+    volumes:
+      - ../data/postgres:/var/lib/postgresql/data
+    networks:
+      - tm_net
+
+  vector_db:
+    image: qdrant/qdrant:latest
+    env_file:
+      - ./env/vector_db.env
+    volumes:
+      - ../data/vector_db:/qdrant/storage
+    networks:
+      - tm_net
+
+  api_gateway:
+    build:
+      context: ../services/api_gateway
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/api_gateway.env
+    depends_on:
+      - core_agent
+    ports:
+      - "8080:8080"
+    networks:
+      - tm_net
+
+  core_agent:
+    build:
+      context: ../services/core_agent
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/core_agent.env
+    volumes:
+      - ../genome_store:/app/genome_store:ro
+      - ../data/logs:/app/data/logs
+      - ../data/checkpoints:/app/data/checkpoints
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ "gpu" ]
+    networks:
+      - tm_net
+
+  meta_agent:
+    build:
+      context: ../services/meta_agent
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/meta_agent.env
+    volumes:
+      - ../genome_store:/app/genome_store
+      - ../data/traces:/app/data/traces:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ "gpu" ]
+    networks:
+      - tm_net
+
+  orchestrator:
+    build:
+      context: ../services/orchestrator
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/orchestrator.env
+    networks:
+      - tm_net
+
+  eval_judge:
+    build:
+      context: ../services/eval_judge
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/eval_judge.env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ "gpu" ]
+    networks:
+      - tm_net
+
+  training_worker:
+    build:
+      context: ../services/training_worker
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/training_worker.env
+    volumes:
+      - ../data/datasets:/app/data/datasets
+      - ../data/checkpoints:/app/data/checkpoints
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ "gpu" ]
+    networks:
+      - tm_net
+
+  safety_guard:
+    build:
+      context: ../services/safety_guard
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/safety_guard.env
+    volumes:
+      - ../genome_store/safety:/app/genome_store/safety:ro
+    networks:
+      - tm_net
+
+  monitor:
+    build:
+      context: ../services/monitor
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/monitor.env
+    networks:
+      - tm_net
+
+networks:
+  tm_net:
+    driver: bridge

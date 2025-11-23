@@ -1,0 +1,8 @@
+rules:
+  default: "core_agent"
+  coding_tasks:
+    condition: "user input involves writing code"
+    action: "use_skill: coding_assistant"
+  medical_tasks:
+    condition: "user input involves medical advice"
+    action: "use_skill: medical_safety_checker"

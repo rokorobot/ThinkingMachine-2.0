@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: thinking_machine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  core-agent:
+    build:
+      context: .
+      dockerfile: services/core/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/thinking_machine
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+
+  meta-agent:
+    build:
+      context: .
+      dockerfile: services/meta/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/thinking_machine
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      - postgres
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: services/orchestrator/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/thinking_machine
+    depends_on:
+      - postgres
+
+  eval-judge:
+    build:
+      context: .
+      dockerfile: services/eval_judge/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/thinking_machine
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:

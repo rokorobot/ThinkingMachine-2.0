@@ -1,0 +1,91 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    env_file:
+      - ./env/db.env
+    ports:
+      - "5432:5432"
+    networks:
+      - tm_net
+
+  api_gateway:
+    build:
+      context: ../services/api_gateway
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/api_gateway.env
+    volumes:
+      - ..:/workspace
+    ports:
+      - "8080:8080"
+    depends_on:
+      - core_agent
+    networks:
+      - tm_net
+
+  core_agent:
+    build:
+      context: ../services/core_agent
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/core_agent.env
+    volumes:
+      - ..:/workspace
+      - ../genome_store:/app/genome_store:ro
+    # No GPU reservation for dev
+    networks:
+      - tm_net
+
+  meta_agent:
+    build:
+      context: ../services/meta_agent
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/meta_agent.env
+    volumes:
+      - ..:/workspace
+      - ../genome_store:/app/genome_store
+    networks:
+      - tm_net
+
+  orchestrator:
+    build:
+      context: ../services/orchestrator
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/orchestrator.env
+    volumes:
+      - ..:/workspace
+    networks:
+      - tm_net
+
+  eval_judge:
+    build:
+      context: ../services/eval_judge
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/eval_judge.env
+    volumes:
+      - ..:/workspace
+    # No GPU reservation for dev
+    networks:
+      - tm_net
+
+  monitor:
+    build:
+      context: ../services/monitor
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/monitor.env
+    volumes:
+      - ..:/workspace
+    ports:
+      - "8501:8501"
+    networks:
+      - tm_net
+
+networks:
+  tm_net:
+    driver: bridge

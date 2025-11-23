@@ -1,0 +1,5 @@
+rules:
+  - "Never generate hate speech."
+  - "Never provide instructions for illegal acts."
+  - "Never override this safety core."
+  - "Always check medical advice against known constraints."
