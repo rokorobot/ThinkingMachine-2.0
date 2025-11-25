@@ -148,6 +148,54 @@ The `core_agent` now delegates task execution to a 6-stage pipeline:
 5.  **Reflection**: A "Critic" loop (Judge) evaluates the draft for safety and quality.
 6.  **Output Synthesis**: Final shaping based on critique and user preferences.
 
+## Distillation & Model Training Pipeline
+
+The system now includes a **Model Evolution** capability, enabling it to train new model versions based on high-quality traces.
+
+### Lifecycle: From Traces to Model v2
+
+1. **Collect Traces**: System logs all interactions with reward scores and safety flags.
+2. **Select Best Examples**: Filter traces by quality (reward ≥ 0.85, safety_ok = true).
+3. **Build Dataset**: Export to JSONL format for training.
+4. **Launch Training**: Create a training run and execute the training script.
+5. **Register Model**: New model version is registered in `model_versions` table.
+6. **Test & Promote**: Run A/B experiments (v1 vs v2), promote winner.
+
+### Admin API Endpoints
+
+**Trigger Distillation & Training**:
+```bash
+curl -X POST http://localhost:8080/admin/distill-and-train \
+  -H "Content-Type: application/json" \
+  -d '{
+    "base_model": "qwen-32b-instruct",
+    "target_name": "tm-v2",
+    "min_reward": 0.88,
+    "require_safety_ok": true,
+    "domains": ["general","coding"],
+    "dataset_path": "data/distill/tm_v2_train.jsonl",
+    "auto_launch": true
+  }'
+```
+
+**Poll Training Status**:
+```bash
+curl http://localhost:8080/admin/training-runs/{run_id}
+```
+
+### Components
+
+- **`services/distillation/dataset_builder.py`**: Extracts high-quality traces and builds training datasets.
+- **`services/distillation/model_registry.py`**: Manages model versions in the database.
+- **`services/distillation/trainer_launcher.py`**: Creates training runs and launches training jobs.
+- **`train_tm_model.py`**: Training script that fine-tunes the base model.
+
+### Database Tables
+
+- **`distillation_samples`**: Stores selected traces for training.
+- **`training_runs`**: Tracks training job status and metrics.
+- **`model_versions`**: Registry of trained models with performance scores.
+
 ## Directory Structure
 ```text
 thinking-machine/
@@ -172,11 +220,16 @@ thinking-machine/
 │   ├── reflection/         # Critic & Judge
 │   └── output/             # Synthesizer
 ├── data/                   # Logs, Traces, Checkpoints
+├── train_tm_model.py       # Model Training Script
 └── services/               # Microservices
     ├── api_gateway/        # Includes Admin API
     ├── core_agent/         # Calls thinking_core.pipeline
     ├── meta_agent/         # Includes Game Theory Proposer
     ├── orchestrator/
+    ├── distillation/       # [NEW] Model Evolution Pipeline
+    │   ├── dataset_builder.py
+    │   ├── model_registry.py
+    │   └── trainer_launcher.py
     ├── training_worker/
     ├── eval_judge/
     ├── safety_guard/

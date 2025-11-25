@@ -146,3 +146,115 @@ def preview_equilibrium(
         proposal_id=None,
         message="Preview equilibrium only; no proposal created.",
     )
+# NEW imports for distillation + training
+from services.distillation.dataset_builder import export_distillation_dataset
+from services.distillation.trainer_launcher import create_training_run, launch_local_training
+
+
+# ========== Distill & Train ==========
+
+class DistillAndTrainRequest(BaseModel):
+    base_model: str                  # e.g. "qwen-32b-instruct" or "llama-3-70b"
+    target_name: str                 # e.g. "tm-v2"
+    min_reward: float = 0.85
+    require_safety_ok: bool = True
+    domains: Optional[List[str]] = None
+    dataset_path: str = "data/distill/tm_v2_train.jsonl"
+    training_config: Dict[str, Any] = {}
+    auto_launch: bool = True         # if False: only create training_runs row
+
+
+class DistillAndTrainResponse(BaseModel):
+    training_run_id: str
+    dataset_path: str
+    message: str
+
+
+@router.post("/distill-and-train", response_model=DistillAndTrainResponse)
+def distill_and_train(req: DistillAndTrainRequest):
+    """
+    High-level admin endpoint:
+
+    1) Build a distillation dataset from high-quality traces.
+    2) Create a training_runs row.
+    3) Optionally launch the training script as a subprocess.
+    """
+    # 1) Export dataset
+    dataset_path = export_distillation_dataset(
+        output_path=req.dataset_path,
+        min_reward=req.min_reward,
+        require_safety_ok=req.require_safety_ok,
+        domains=req.domains,
+    )
+
+    # 2) Create training run
+    run_id = create_training_run(
+        base_model=req.base_model,
+        target_name=req.target_name,
+        dataset_path=dataset_path,
+        config=req.training_config,
+    )
+
+    # 3) Optionally launch training job
+    if req.auto_launch:
+        try:
+            launch_local_training(run_id)
+            msg = f"Training run {run_id} created and training launched."
+        except Exception as e:
+            msg = f"Training run {run_id} created, but failed to launch training: {e}"
+            # You might want to set status='failed_to_launch' here
+    else:
+        msg = f"Training run {run_id} created. Launch manually when ready."
+
+    return DistillAndTrainResponse(
+        training_run_id=run_id,
+        dataset_path=dataset_path,
+        message=msg,
+    )
+
+
+# ========== Training run status ==========
+
+class TrainingRunStatusResponse(BaseModel):
+    id: str
+    base_model: str
+    target_name: str
+    status: str
+    dataset_path: Optional[str] = None
+    logs_path: Optional[str] = None
+    metrics: Dict[str, Any]
+    model_version_id: Optional[str] = None
+
+
+@router.get("/training-runs/{run_id}", response_model=TrainingRunStatusResponse)
+def get_training_run_status(run_id: str):
+    """
+    Poll the status of a training run.
+    Useful for dashboards and monitoring.
+    """
+    with db.get_conn() as conn:
+        with conn.cursor(cursor_factory=db.psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT id, base_model, target_name, status,
+                       dataset_path, logs_path, metrics, model_version_id
+                FROM training_runs
+                WHERE id = %s
+                """,
+                (run_id,),
+            )
+            row = cur.fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="training_run not found")
+
+    return TrainingRunStatusResponse(
+        id=str(row["id"]),
+        base_model=row["base_model"],
+        target_name=row["target_name"],
+        status=row["status"],
+        dataset_path=row.get("dataset_path"),
+        logs_path=row.get("logs_path"),
+        metrics=row.get("metrics") or {},
+        model_version_id=str(row["model_version_id"]) if row.get("model_version_id") else None,
+    )
