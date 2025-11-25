@@ -130,6 +130,24 @@ The **Monitor** service (`http://localhost:8501`) has been upgraded to a full "M
 ### Admin Actions
 The sidebar includes an **Operator Actions** section to manually trigger specific system functions, such as running a **Game Theory Optimization** cycle.
 
+## Thinking Machine 2.0 Architecture
+
+The system has been upgraded to **Thinking Machine 2.0**, introducing a sophisticated reasoning pipeline orchestrated by the `thinking_core` package.
+
+### Core Pipeline
+The `core_agent` now delegates task execution to a 6-stage pipeline:
+
+1.  **User Context**: Assembles user profile and relevant memories.
+2.  **World Model**: Simulates task nature, constraints, and safety signals.
+3.  **Retrieval**: Fetches external knowledge (Web/Docs) if needed.
+4.  **Multi-Agent Reasoning**:
+    *   **Direct Responder**: Fast, intuitive answers.
+    *   **Planner**: Step-by-step reasoning.
+    *   **Cautious Checker**: Safety and error analysis.
+    *   **Synthesizer**: Merges agent outputs.
+5.  **Reflection**: A "Critic" loop (Judge) evaluates the draft for safety and quality.
+6.  **Output Synthesis**: Final shaping based on critique and user preferences.
+
 ## Directory Structure
 ```text
 thinking-machine/
@@ -145,10 +163,18 @@ thinking-machine/
 │   └── skills/
 │       └── code/
 │           └── game_strategy.py # Game Theory Logic
+├── thinking_core/          # [NEW] Thinking Machine 2.0 Pipeline
+│   ├── pipeline.py         # Main Orchestrator
+│   ├── user_context/       # Context Assembler
+│   ├── world_model/        # Simulator & Signals
+│   ├── retrieval/          # RAG & Search
+│   ├── reasoning/          # Multi-Agent Core
+│   ├── reflection/         # Critic & Judge
+│   └── output/             # Synthesizer
 ├── data/                   # Logs, Traces, Checkpoints
 └── services/               # Microservices
     ├── api_gateway/        # Includes Admin API
-    ├── core_agent/
+    ├── core_agent/         # Calls thinking_core.pipeline
     ├── meta_agent/         # Includes Game Theory Proposer
     ├── orchestrator/
     ├── training_worker/
