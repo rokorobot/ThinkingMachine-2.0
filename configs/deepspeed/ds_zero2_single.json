@@ -1,0 +1,19 @@
+{
+    "zero_optimization": {
+        "stage": 2,
+        "offload_optimizer": {
+            "device": "none"
+        },
+        "contiguous_gradients": true,
+        "overlap_comm": false
+    },
+    "bf16": {
+        "enabled": true
+    },
+    "gradient_accumulation_steps": 4,
+    "train_batch_size": 8,
+    "gradient_clipping": 1.0,
+    "steps_per_print": 100,
+    "wall_clock_breakdown": false,
+    "zero_allow_untested_optimizer": true
+}

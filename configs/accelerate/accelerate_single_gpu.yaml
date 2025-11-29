@@ -1,0 +1,19 @@
+compute_environment: LOCAL_MACHINE
+distributed_type: NO
+mixed_precision: bf16       # good for H100/H200; use "fp16" if issues
+use_cpu: false
+
+num_processes: 1
+gpu_ids: 0
+
+machine_rank: 0
+num_machines: 1
+
+main_training_function: main
+downcast_bf16: no
+
+# Logging / debug
+debug: false
+rdzv_backend: static
+main_process_ip: null
+main_process_port: 29500

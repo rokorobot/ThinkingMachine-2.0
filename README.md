@@ -371,6 +371,26 @@ The worker will:
 4. Save the adapter to `models/`
 5. Register the new model version as a `candidate` for evaluation
 
+### 🧪 Mono-GPU LoRA Training Workflow
+
+For smaller experiments or single-GPU nodes, you can use the Mono-GPU configurations.
+
+#### 1. Configuration
+- **Accelerate (Standard)**: `configs/accelerate/accelerate_single_gpu.yaml` (Simple 1-GPU setup)
+- **Accelerate (DeepSpeed)**: `configs/accelerate/accelerate_single_gpu_deepspeed.yaml` (1-GPU with Zero2)
+- **DeepSpeed**: `configs/deepspeed/ds_zero2_single.json` (Zero Stage 2 optimization)
+
+#### 2. Execution
+Launch using the single-GPU config:
+
+```bash
+# Standard Single-GPU (Recommended for small models)
+accelerate launch --config_file configs/accelerate/accelerate_single_gpu.yaml train_tm_model.py --run-id <RUN_ID>
+
+# Single-GPU with DeepSpeed (For memory efficiency)
+accelerate launch --config_file configs/accelerate/accelerate_single_gpu_deepspeed.yaml train_tm_model.py --run-id <RUN_ID>
+```
+
 ### 🚧 In Progress
 - **Real Safety Guard** (currently placeholder) - Advanced safety validation logic
 - **Skill Evolution** (code-level mutations) - Automatic code generation and testing
