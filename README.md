@@ -306,6 +306,70 @@ Self-improvement through model distillation and fine-tuning:
 - **Model Versioning**: Trained models registered as candidates in `model_versions` table
 - **Tournament Evaluation**: New models tested against baseline before promotion
 - **GPU Optimization**: Supports bf16, gradient checkpointing, and gradient accumulation for DGX deployment
+- **Multi-GPU Support**: Fully configured for DGX Spark (8x H200) using Accelerate and DeepSpeed Zero3
+
+### 🧪 Multi-GPU LoRA Training Workflow
+
+The system includes a "Research Lab in a Box" setup for high-performance training on DGX nodes.
+
+#### 1. Configuration
+We provide a reproducible, version-pinned stack for DGX Spark (CUDA 12.1, PyTorch 2.2.2, Transformers 4.40.1):
+- **Docker**: `docker/Dockerfile.training` (Pre-built image with all dependencies)
+- **Conda**: `environment.yml` (Alternative environment setup)
+- **Accelerate**: `configs/accelerate/accelerate_deepspeed_zero3.yaml` (8-GPU orchestration)
+- **DeepSpeed**: `configs/deepspeed/ds_zero3_tm.json` (Zero Stage 3 optimization)
+
+#### 2. Triggering Training
+You trigger the distillation and training process via the Admin API. This creates a training run entry in the database.
+
+```bash
+curl -X POST http://localhost:8080/admin/distill-and-train \
+  -H "Content-Type: application/json" \
+  -d '{
+    "base_model": "qwen-32b-instruct",
+    "target_name": "tm-v2",
+    "min_reward": 0.88,
+    "require_safety_ok": true,
+    "domains": ["general","coding"],
+    "dataset_path": "data/distill/tm_v2_train.jsonl",
+    "training_config": {
+      "epochs": 1,
+      "batch_size": 2,
+      "grad_accum_steps": 8,
+      "learning_rate": 1e-4,
+      "max_length": 1024,
+      "lora_r": 8,
+      "lora_alpha": 16,
+      "lora_dropout": 0.05
+    },
+    "auto_launch": false
+  }'
+```
+
+#### 3. Execution on DGX
+Once the run is created (and data distilled), launch the training worker on the DGX node using Accelerate:
+
+**Option A: Docker**
+```bash
+docker build -t tm-train -f docker/Dockerfile.training .
+docker run --gpus all -it tm-train
+# Inside container:
+accelerate launch --config_file configs/accelerate/accelerate_deepspeed_zero3.yaml train_tm_model.py --run-id <RUN_ID>
+```
+
+**Option B: Conda**
+```bash
+conda env create -f environment.yml
+conda activate tm-train
+accelerate launch --config_file configs/accelerate/accelerate_deepspeed_zero3.yaml train_tm_model.py --run-id <RUN_ID>
+```
+
+The worker will:
+1. Load the run config and dataset
+2. Apply LoRA adapters to the base model
+3. Fine-tune across 8 GPUs using DeepSpeed Zero3
+4. Save the adapter to `models/`
+5. Register the new model version as a `candidate` for evaluation
 
 ### 🚧 In Progress
 - **Real Safety Guard** (currently placeholder) - Advanced safety validation logic
