@@ -1,0 +1,20 @@
+compute_environment: LOCAL_MACHINE
+debug: false
+distributed_type: DEEPSPEED
+mixed_precision: bf16
+deepspeed_config:
+  deepspeed_config_file: configs/deepspeed/ds_zero3_tm.json
+
+num_machines: 1
+machine_rank: 0
+num_processes: 8           # 8 GPUs on a DGX node
+gpu_ids: all
+
+# You can override this via env variable if needed
+main_process_ip: null
+main_process_port: 29500
+main_training_function: main
+
+# Logging
+rdzv_backend: static
+use_cpu: false

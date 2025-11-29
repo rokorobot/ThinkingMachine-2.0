@@ -1,0 +1,25 @@
+{
+    "zero_optimization": {
+        "stage": 3,
+        "offload_optimizer": {
+            "device": "none"
+        },
+        "offload_param": {
+            "device": "none"
+        },
+        "overlap_comm": true,
+        "contiguous_gradients": true,
+        "reduce_bucket_size": 5e7,
+        "stage3_prefetch_bucket_size": 5e7,
+        "stage3_param_persistence_threshold": 1e6
+    },
+    "bf16": {
+        "enabled": true
+    },
+    "gradient_accumulation_steps": 8,
+    "train_batch_size": 64,
+    "gradient_clipping": 1.0,
+    "steps_per_print": 100,
+    "wall_clock_breakdown": false,
+    "zero_allow_untested_optimizer": true
+}

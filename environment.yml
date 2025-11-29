@@ -1,0 +1,34 @@
+name: tm-train
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip=24.0
+  - cudatoolkit=12.1  # for CPU tools; actual GPU runtime from host/docker
+  - numpy=1.26.4
+  - protobuf=5.26.1
+  - psutil
+  - pip:
+      - torch==2.2.2+cu121
+      - torchvision==0.17.2+cu121
+      - torchaudio==2.2.2+cu121
+      - --extra-index-url https://download.pytorch.org/whl/cu121
+      - transformers==4.40.1
+      - datasets==2.19.0
+      - tokenizers==0.19.1
+      - accelerate==0.30.1
+      - peft==0.10.0
+      - bitsandbytes==0.43.1
+      - sentencepiece==0.2.0
+      - pypdf==4.2.0
+      - fastapi==0.110.1
+      - uvicorn[standard]==0.29.0
+      - requests==2.31.0
+      - psycopg2-binary==2.9.9
+      - deepspeed==0.14.0
+      - tqdm
+      - typer
+      - rich
