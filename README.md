@@ -227,21 +227,82 @@ thinking-machine-2.0/
 ```
 
 ## Key Features
+## Key Features
 
 ### ✅ Implemented
-- **Full Cognitive Pipeline** (6 phases: Context → World Model → RAG → Reasoning → Reflection → Synthesis)
-- **RAG with pgvector** (PDF/TXT/MD ingestion, vector search, web integration hook)
-- **Long-Term User Memory** (per-user context, semantic + recency retrieval)
-- **Game Theory Optimization** (n-player equilibrium, ESS checks, tournament experiments)
-- **Mission Control Dashboard** (real-time metrics, genome viewer, human-in-the-loop)
-- **Self-Modification Loop** (trace → reflect → propose → validate → experiment → evolve)
-- **Safety Layer** (immutable core, audit log, proposal review)
+
+#### 1. Full Cognitive Pipeline (6 Phases)
+The system implements a complete reasoning loop inspired by human cognition:
+- **Phase 1: User Context** - Retrieves user-specific memories and preferences from long-term storage
+- **Phase 2: World Model** - Classifies task nature (coding, medical, research, etc.) to adapt reasoning strategy
+- **Phase 3: RAG Retrieval** - Searches knowledge base using vector similarity and optionally fetches live web data
+- **Phase 4: Multi-Agent Reasoning** - LLM processes the task with full context (user memories + retrieved knowledge + policies)
+- **Phase 5: Reflection & Critique** - Self-evaluates output for quality, safety, and coherence
+- **Phase 6: Output Synthesis** - Generates final response incorporating reflection insights
+
+#### 2. RAG with pgvector
+Retrieval-Augmented Generation for knowledge-grounded responses:
+- **Document Ingestion**: Supports PDF, TXT, and Markdown files via CLI (`scripts/ingest_knowledge.py`) or API (`/admin/knowledge/upload`)
+- **Vector Search**: Uses PostgreSQL with pgvector extension for semantic similarity search over embedded text chunks
+- **Web Integration Hook**: Ready for external web search microservice (Bing/Brave/Exa) for live information
+- **Automatic Activation**: Triggers for research, medical, and coding domains based on task classification
+- **Metrics Tracking**: Logs RAG usage, snippet counts, and retrieval quality in traces
+
+#### 3. Long-Term User Memory
+Per-user context that evolves over time:
+- **Persistent Storage**: Each user (identified by `user_external_id`) has a dedicated memory store
+- **Semantic Retrieval**: Vector search finds relevant past interactions based on query similarity
+- **Recency Weighting**: Recent high-importance memories are prioritized
+- **Memory Types**: Supports facts, preferences, projects, and custom categories
+- **Privacy**: User memories are isolated and only accessible to that specific user
+
+#### 4. Game Theory Optimization
+Strategic adaptation using multi-player game theory:
+- **N-Player Equilibrium**: Models interactions between Agent, Regulator (safety), and User as a strategic game
+- **ESS Checks**: Validates Evolutionarily Stable Strategies to ensure robust adaptations
+- **Tournament Experiments**: Tests proposed changes in controlled multi-round scenarios
+- **Admin API**: Manual triggers for optimization cycles (`/admin/game-theory/preview`, `/optimize`)
+- **Strategy Visualization**: Mission Control displays current equilibrium and recommended strategies
+
+#### 5. Mission Control Dashboard
+Real-time monitoring and control interface:
+- **6 Specialized Tabs**: Ops & KPIs, Cognitive Engine, Knowledge Base (RAG), Self-Reprogramming, Safety & Governance, Interaction & Traces
+- **Live Metrics**: System health, success rates, latency, RAG usage, user activity
+- **Genome Viewer**: Inspect active policies and self-prompts
+- **Human-in-the-Loop**: Review and approve/reject self-modification proposals
+- **Visualizations**: Plotly charts for game theory equilibrium, trace analysis, and knowledge sources
+
+#### 6. Self-Modification Loop
+Continuous improvement through self-evolution:
+1. **Trace**: All interactions logged with metadata (reward scores, latency, errors)
+2. **Reflect**: Meta-agent analyzes failing traces to identify improvement opportunities
+3. **Propose**: Generates patches to policies, prompts, or skills (stored in `genome_store/`)
+4. **Validate**: Safety guard checks proposals against immutable core rules
+5. **Experiment**: Orchestrator spawns candidate agents with proposed changes
+6. **Evaluate**: Eval judge scores candidates using reward metrics and tournament games
+7. **Evolve**: Successful proposals (high score + stable strategy) are merged into main genome
+
+#### 7. Safety Layer
+Multi-level safety guarantees:
+- **Immutable Core**: Read-only YAML file (`genome_store/safety/immutable_core.yaml`) defines non-negotiable rules
+- **Audit Log**: Complete history of all proposals (accepted/rejected) with timestamps and reasons
+- **Proposal Review**: Human operators can manually approve/reject changes via Mission Control
+- **Safety Guard Service**: Validates all modifications before deployment (currently placeholder)
+- **Trace Monitoring**: Flags hallucinations, low confidence, and policy violations in real-time
+
+#### 8. Genome Store
+Git-based versioning for the AI's "mind":
+- **Policy Versioning**: Routing rules, tool-use policies, and safety overrides tracked in database
+- **Prompt Evolution**: Self-prompts (system instructions) can be modified and rolled back
+- **Skill Library**: Code-based capabilities stored in `genome_store/skills/code/`
+- **Immutable Safety**: Core safety rules separated from mutable components
+- **Rollback Support**: Can revert to previous genome versions if issues arise
 
 ### 🚧 In Progress
-- **Real Safety Guard** (currently placeholder)
-- **Training Worker** (LoRA fine-tuning logic)
-- **Skill Evolution** (code-level mutations)
-- **Web Search Service** (external microservice for live data)
+- **Real Safety Guard** (currently placeholder) - Advanced safety validation logic
+- **Training Worker** (LoRA fine-tuning logic) - Distillation and fine-tuning of smaller models
+- **Skill Evolution** (code-level mutations) - Automatic code generation and testing
+- **Web Search Service** (external microservice for live data) - Integration with search APIs
 
 ## License
 
