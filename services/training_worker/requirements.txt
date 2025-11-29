@@ -1,6 +1,30 @@
-transformers>=4.40.0
-datasets>=2.19.0
-peft>=0.10.0
-accelerate>=0.27.0
-torch>=2.0.0
-bitsandbytes>=0.41.0
+# Core DL stack (CUDA 12.1)
+torch==2.2.2
+torchvision==0.17.2
+torchaudio==2.2.2
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+# Hugging Face ecosystem
+transformers==4.40.1
+datasets==2.19.0
+tokenizers==0.19.1
+accelerate==0.30.1
+peft==0.10.0
+bitsandbytes==0.43.1
+sentencepiece==0.2.0
+
+# PDF / Text ingestion
+pypdf==4.2.0
+
+# Web/API
+fastapi==0.110.1
+uvicorn[standard]==0.29.0
+requests==2.31.0
+
+# Utilities
+protobuf==5.26.1
+numpy==1.26.4
+psycopg2-binary==2.9.9
+
+# Optional: DeepSpeed integration
+deepspeed==0.14.0
