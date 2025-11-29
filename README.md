@@ -298,9 +298,17 @@ Git-based versioning for the AI's "mind":
 - **Immutable Safety**: Core safety rules separated from mutable components
 - **Rollback Support**: Can revert to previous genome versions if issues arise
 
+#### 9. Training Worker (LoRA Fine-Tuning)
+Self-improvement through model distillation and fine-tuning:
+- **LoRA Adapters**: Low-Rank Adaptation for efficient fine-tuning with minimal parameters
+- **Distillation Pipeline**: Mines high-quality traces (reward > threshold) to create training datasets
+- **Automated Training**: `train_tm_model.py` handles complete training workflow from dataset to model registration
+- **Model Versioning**: Trained models registered as candidates in `model_versions` table
+- **Tournament Evaluation**: New models tested against baseline before promotion
+- **GPU Optimization**: Supports bf16, gradient checkpointing, and gradient accumulation for DGX deployment
+
 ### 🚧 In Progress
 - **Real Safety Guard** (currently placeholder) - Advanced safety validation logic
-- **Training Worker** (LoRA fine-tuning logic) - Distillation and fine-tuning of smaller models
 - **Skill Evolution** (code-level mutations) - Automatic code generation and testing
 - **Web Search Service** (external microservice for live data) - Integration with search APIs
 
