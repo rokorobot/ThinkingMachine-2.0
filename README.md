@@ -90,6 +90,22 @@ curl -X POST http://localhost:8080/task \
     "user_external_id": "robert_123",
     "memory_note": "I am working on the Thinking Machine project."
   }'
+```
+
+## User-Specific Policy Overlays
+
+The system now adapts its behavior to individual users by inferring their preferences from interaction traces.
+
+### How it works
+1.  **Trace Analysis**: The **Meta Agent** periodically analyzes recent traces for each user.
+2.  **Preference Inference**: It infers preferences like `tone` (direct vs gentle), `detail_level` (concise vs detailed), and `safety_bias`.
+3.  **Policy Overlay**: These preferences are converted into a **Policy Overlay** (stored in `user_policies`) that overrides specific routing and tool-use rules in the global policy.
+4.  **Runtime Application**: When the Core Agent handles a task, it merges the active global policy with the user's specific overlay.
+
+### Example Preferences
+*   **Tone**: `direct` (high directness) vs `gentle` (low directness)
+*   **Detail**: `concise` (short replies) vs `detailed` (long replies)
+*   **Safety**: `strict` (extra checks) vs `relaxed`
 ## Mission Control Dashboard
 
 The **Monitor** service (`http://localhost:8501`) has been upgraded to a full "Mission Control" interface with 5 tabs reflecting the system's core capabilities:
@@ -114,6 +130,72 @@ The **Monitor** service (`http://localhost:8501`) has been upgraded to a full "M
 ### Admin Actions
 The sidebar includes an **Operator Actions** section to manually trigger specific system functions, such as running a **Game Theory Optimization** cycle.
 
+## Thinking Machine 2.0 Architecture
+
+The system has been upgraded to **Thinking Machine 2.0**, introducing a sophisticated reasoning pipeline orchestrated by the `thinking_core` package.
+
+### Core Pipeline
+The `core_agent` now delegates task execution to a 6-stage pipeline:
+
+1.  **User Context**: Assembles user profile and relevant memories.
+2.  **World Model**: Simulates task nature, constraints, and safety signals.
+3.  **Retrieval**: Fetches external knowledge (Web/Docs) if needed.
+4.  **Multi-Agent Reasoning**:
+    *   **Direct Responder**: Fast, intuitive answers.
+    *   **Planner**: Step-by-step reasoning.
+    *   **Cautious Checker**: Safety and error analysis.
+    *   **Synthesizer**: Merges agent outputs.
+5.  **Reflection**: A "Critic" loop (Judge) evaluates the draft for safety and quality.
+6.  **Output Synthesis**: Final shaping based on critique and user preferences.
+
+## Distillation & Model Training Pipeline
+
+The system now includes a **Model Evolution** capability, enabling it to train new model versions based on high-quality traces.
+
+### Lifecycle: From Traces to Model v2
+
+1. **Collect Traces**: System logs all interactions with reward scores and safety flags.
+2. **Select Best Examples**: Filter traces by quality (reward ≥ 0.85, safety_ok = true).
+3. **Build Dataset**: Export to JSONL format for training.
+4. **Launch Training**: Create a training run and execute the training script.
+5. **Register Model**: New model version is registered in `model_versions` table.
+6. **Test & Promote**: Run A/B experiments (v1 vs v2), promote winner.
+
+### Admin API Endpoints
+
+**Trigger Distillation & Training**:
+```bash
+curl -X POST http://localhost:8080/admin/distill-and-train \
+  -H "Content-Type: application/json" \
+  -d '{
+    "base_model": "qwen-32b-instruct",
+    "target_name": "tm-v2",
+    "min_reward": 0.88,
+    "require_safety_ok": true,
+    "domains": ["general","coding"],
+    "dataset_path": "data/distill/tm_v2_train.jsonl",
+    "auto_launch": true
+  }'
+```
+
+**Poll Training Status**:
+```bash
+curl http://localhost:8080/admin/training-runs/{run_id}
+```
+
+### Components
+
+- **`services/distillation/dataset_builder.py`**: Extracts high-quality traces and builds training datasets.
+- **`services/distillation/model_registry.py`**: Manages model versions in the database.
+- **`services/distillation/trainer_launcher.py`**: Creates training runs and launches training jobs.
+- **`train_tm_model.py`**: Training script that fine-tunes the base model.
+
+### Database Tables
+
+- **`distillation_samples`**: Stores selected traces for training.
+- **`training_runs`**: Tracks training job status and metrics.
+- **`model_versions`**: Registry of trained models with performance scores.
+
 ## Directory Structure
 ```text
 thinking-machine/
@@ -129,12 +211,25 @@ thinking-machine/
 │   └── skills/
 │       └── code/
 │           └── game_strategy.py # Game Theory Logic
+├── thinking_core/          # [NEW] Thinking Machine 2.0 Pipeline
+│   ├── pipeline.py         # Main Orchestrator
+│   ├── user_context/       # Context Assembler
+│   ├── world_model/        # Simulator & Signals
+│   ├── retrieval/          # RAG & Search
+│   ├── reasoning/          # Multi-Agent Core
+│   ├── reflection/         # Critic & Judge
+│   └── output/             # Synthesizer
 ├── data/                   # Logs, Traces, Checkpoints
+├── train_tm_model.py       # Model Training Script
 └── services/               # Microservices
     ├── api_gateway/        # Includes Admin API
-    ├── core_agent/
+    ├── core_agent/         # Calls thinking_core.pipeline
     ├── meta_agent/         # Includes Game Theory Proposer
     ├── orchestrator/
+    ├── distillation/       # [NEW] Model Evolution Pipeline
+    │   ├── dataset_builder.py
+    │   ├── model_registry.py
+    │   └── trainer_launcher.py
     ├── training_worker/
     ├── eval_judge/
     ├── safety_guard/

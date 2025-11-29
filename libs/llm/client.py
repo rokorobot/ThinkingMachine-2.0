@@ -61,20 +61,21 @@ class LLMClient:
             )
         )
 
-    def chat(self, messages: List[Dict[str, str]]) -> str:
+    def chat(self, messages: List[Dict[str, str]], override_model: Optional[str] = None) -> str:
+        model = override_model or self.cfg.model
         if self.cfg.backend == "openai":
-            return self._chat_openai(messages)
+            return self._chat_openai(messages, model)
         elif self.cfg.backend in ("tgi", "vllm"):
-            return self._chat_tgi_style(messages)
+            return self._chat_tgi_style(messages, model)
         else:
             raise ValueError(f"Unsupported LLM backend: {self.cfg.backend}")
 
     # -------- OpenAI backend --------
 
-    def _chat_openai(self, messages: List[Dict[str, str]]) -> str:
+    def _chat_openai(self, messages: List[Dict[str, str]], model: str) -> str:
         # Using new OpenAI client style
         resp = openai.chat.completions.create(
-            model=self.cfg.model,
+            model=model,
             messages=messages,
             temperature=self.cfg.temperature,
             max_tokens=self.cfg.max_tokens,
@@ -83,7 +84,7 @@ class LLMClient:
 
     # -------- TGI / vLLM backend (HTTP) --------
 
-    def _chat_tgi_style(self, messages: List[Dict[str, str]]) -> str:
+    def _chat_tgi_style(self, messages: List[Dict[str, str]], model: str) -> str:
         """
         Assumes an OpenAI-compatible /v1/chat/completions endpoint.
         Many vLLM & TGI setups now mimic this.
@@ -98,7 +99,7 @@ class LLMClient:
             headers["Authorization"] = f"Bearer {self.cfg.api_key}"
 
         payload = {
-            "model": self.cfg.model,
+            "model": model,
             "messages": messages,
             "temperature": self.cfg.temperature,
             "max_tokens": self.cfg.max_tokens,

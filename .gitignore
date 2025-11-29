@@ -23,7 +23,7 @@ MANIFEST
 
 # Virtual Environments
 venv/
-env/
+# env/
 ENV/
 .env
 .venv
@@ -39,7 +39,7 @@ ENV/
 docker-compose.override.yml
 
 # Project Specific
-infra/env/*.env
+# infra/env/*.env
 !infra/env/.gitkeep
 # data/postgres/  <-- Commented out to allow upload
 # data/vector_db/ <-- Commented out to allow upload

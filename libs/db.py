@@ -21,6 +21,126 @@ def get_conn():
         conn.close()
 
 
+# ---------- User Profile Helpers ----------
+
+def get_user_profile(user_id: str) -> dict | None:
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT profile FROM users WHERE id = %s", (user_id,))
+            row = cur.fetchone()
+            return dict(row["profile"]) if row else None
+
+
+def update_user_profile_preferences(user_id: str, pref_patch: dict) -> None:
+    """
+    Shallow-merge pref_patch into users.profile['preferences'].
+    """
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT profile FROM users WHERE id = %s FOR UPDATE", (user_id,))
+            row = cur.fetchone()
+            if not row:
+                return
+            profile = row["profile"] or {}
+            prefs = profile.get("preferences", {})
+            prefs.update(pref_patch)
+            profile["preferences"] = prefs
+            cur.execute(
+                "UPDATE users SET profile = %s::jsonb WHERE id = %s",
+                (psycopg2.extras.Json(profile), user_id),
+            )
+        conn.commit()
+
+
+# ---------- User Policies Helpers ----------
+
+def get_active_user_policy_overlay(user_id: str) -> dict | None:
+    """
+    Return the active overlay (routing_override, tool_use_override, base_policy_id) for a user.
+    """
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT id, user_id, base_policy_id, routing_override, tool_use_override
+                FROM user_policies
+                WHERE user_id = %s
+                  AND is_active = TRUE
+                ORDER BY updated_at DESC
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+
+def upsert_user_policy_overlay(
+    user_id: str,
+    base_policy_id: str,
+    routing_override: dict,
+    tool_use_override: dict | None = None,
+) -> int:
+    """
+    Either update existing active overlay or create a new one.
+    Returns user_policies.id.
+    """
+    tool_use_override = tool_use_override or {}
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            # Find active overlay
+            cur.execute(
+                """
+                SELECT id
+                FROM user_policies
+                WHERE user_id = %s
+                  AND is_active = TRUE
+                ORDER BY updated_at DESC
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            row = cur.fetchone()
+            if row:
+                up_id = row[0]
+                cur.execute(
+                    """
+                    UPDATE user_policies
+                    SET routing_override = %s::jsonb,
+                        tool_use_override = %s::jsonb,
+                        base_policy_id = %s,
+                        updated_at = NOW()
+                    WHERE id = %s
+                    """,
+                    (
+                        psycopg2.extras.Json(routing_override),
+                        psycopg2.extras.Json(tool_use_override),
+                        base_policy_id,
+                        up_id,
+                    ),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO user_policies (
+                        user_id, base_policy_id, routing_override, tool_use_override
+                    )
+                    VALUES (%s, %s, %s::jsonb, %s::jsonb)
+                    RETURNING id
+                    """,
+                    (
+                        user_id,
+                        base_policy_id,
+                        psycopg2.extras.Json(routing_override),
+                        psycopg2.extras.Json(tool_use_override),
+                    ),
+                )
+                up_id = cur.fetchone()[0]
+        conn.commit()
+    return up_id
+
+
 # ---------- Policy + self-prompt ----------
 
 def get_active_policy_version() -> Optional[Dict[str, Any]]:
