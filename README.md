@@ -149,22 +149,28 @@ curl -X POST http://localhost:8080/task \
 
 ## Mission Control Dashboard
 
-The **Monitor** service (`http://localhost:8501`) provides a full "Mission Control" interface with 5 tabs:
+The **Monitor** service (`http://localhost:8501`) provides a full "Mission Control" interface with 6 tabs:
 
 1. **🚀 Ops & KPIs**: System health, success rates, latency, and active user counts.
 2. **🧠 Cognitive Engine**:
    - **Memory**: Stats on total users and memories
    - **Knowledge**: Status of the World Model and Vector DB
    - **User Inspector**: Look up user profiles by `external_id`
-3. **🧬 Self-Reprogramming**:
+3. **📚 Knowledge Base (RAG)**:
+   - **Document Stats**: Total documents and chunks ingested
+   - **RAG Metrics**: Query count, average snippets per query
+   - **Document Sources**: Pie chart of document sources
+   - **Recent Ingestions**: Latest documents added to the knowledge base
+   - **Recent Retrievals**: Queries that used RAG with snippet counts
+4. **🧬 Self-Reprogramming**:
    - **Active Genome**: View the currently active Policy and Self-Prompt
    - **Game Theory**: Visualizes the live **Strategy Equilibrium**
    - **Evolution**: Tracks Proposals and Experiments
-4. **🛡️ Safety & Governance**:
+5. **🛡️ Safety & Governance**:
    - **Immutable Core**: Read-only view of `immutable_core.yaml`
    - **Audit Log**: History of all accepted/rejected proposals
    - **Human-in-the-Loop**: Interface to manually **Approve** or **Reject** pending proposals
-5. **💬 Interaction & Traces**:
+6. **💬 Interaction & Traces**:
    - **Trace Explorer**: Filter traces by domain or error status
    - **Meta-Cognition**: Inspect Reward Scores, Latency, and Hallucination flags
 
