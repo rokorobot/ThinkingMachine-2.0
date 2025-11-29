@@ -54,10 +54,11 @@ if st.sidebar.button("⚡ Trigger Game Theory Opt"):
         st.sidebar.error(f"Connection Error: {e}")
 
 # --- Main Dashboard Structure ---
-# Mapping to User's 6 Categories
+# Mapping to User's 6 Categories + RAG
 tabs = st.tabs([
     "🚀 Ops & KPIs",           # 6. Operational
     "🧠 Cognitive Engine",     # 1. Core Cognitive (Memory, Knowledge)
+    "📚 Knowledge Base (RAG)", # RAG System
     "🧬 Self-Reprogramming",   # 2. Self-Reprogramming (Genome, Evolution, Strategy)
     "🛡️ Safety & Governance",  # 4. Safety (Immutable Core, Audit)
     "💬 Interaction & Traces", # 3. Interaction & 5. Meta-Cognition (Traces, Analysis)
@@ -151,8 +152,71 @@ with tabs[1]:
         else:
             st.warning("User not found.")
 
-# --- Tab 3: Self-Reprogramming ---
+# --- Tab 3: Knowledge Base (RAG) ---
 with tabs[2]:
+    st.header("📚 Knowledge Base & RAG System")
+    
+    # Top metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    docs_count_df = get_data("SELECT COUNT(*) as c FROM knowledge_documents")
+    docs_count = docs_count_df.iloc[0]['c'] if not docs_count_df.empty else 0
+    col1.metric("Total Documents", docs_count)
+    
+    chunks_count_df = get_data("SELECT COUNT(*) as c FROM knowledge_chunks")
+    chunks_count = chunks_count_df.iloc[0]['c'] if not chunks_count_df.empty else 0
+    col2.metric("Total Chunks", chunks_count)
+    
+    rag_usage = get_data("""
+        SELECT COUNT(*) as c FROM traces 
+        WHERE created_at > NOW() - INTERVAL '24 hours'
+        AND (metadata->>'rag_used')::boolean = TRUE
+    """)
+    rag_count = rag_usage.iloc[0]['c'] if not rag_usage.empty else 0
+    col3.metric("RAG Queries (24h)", rag_count)
+    
+    avg_snippets = get_data("""
+        SELECT AVG((metadata->>'rag_snippet_count')::int) as avg FROM traces 
+        WHERE created_at > NOW() - INTERVAL '24 hours'
+        AND (metadata->>'rag_used')::boolean = TRUE
+    """)
+    avg_snip = avg_snippets.iloc[0]['avg'] if not avg_snippets.empty and pd.notnull(avg_snippets.iloc[0]['avg']) else 0
+    col4.metric("Avg Snippets/Query", f"{avg_snip:.1f}")
+    
+    st.divider()
+    col_left, col_right = st.columns(2)
+    
+    with col_left:
+        st.subheader("Documents by Source")
+        sources_df = get_data("SELECT source, COUNT(*) as count FROM knowledge_documents GROUP BY source ORDER BY count DESC")
+        if not sources_df.empty:
+            fig = px.pie(sources_df, values='count', names='source', title='Document Sources')
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No documents ingested yet.")
+    
+    with col_right:
+        st.subheader("Recent Ingestions")
+        recent_docs = get_data("SELECT title, source, doc_type, created_at FROM knowledge_documents ORDER BY created_at DESC LIMIT 10")
+        st.dataframe(recent_docs, use_container_width=True)
+    
+    st.divider()
+    st.subheader("Recent RAG Retrievals")
+    recent_rag = get_data("""
+        SELECT input_text, (metadata->>'rag_snippet_count')::int as snippet_count, created_at
+        FROM traces WHERE (metadata->>'rag_used')::boolean = TRUE
+        ORDER BY created_at DESC LIMIT 5
+    """)
+    if not recent_rag.empty:
+        for _, row in recent_rag.iterrows():
+            with st.expander(f"[{row['created_at']}] {row['input_text'][:60]}... ({row['snippet_count']} snippets)"):
+                st.write(f"**Query:** {row['input_text']}")
+                st.write(f"**Snippets Retrieved:** {row['snippet_count']}")
+    else:
+        st.info("No RAG queries yet.")
+
+# --- Tab 4: Self-Reprogramming ---
+with tabs[3]:
     st.header("Self-Reprogramming Loop")
     
     st.subheader("🧬 Active Genome")
@@ -209,8 +273,8 @@ with tabs[2]:
         exps = get_data("SELECT id, status, result_summary, created_at FROM experiments ORDER BY created_at DESC LIMIT 10")
         st.dataframe(exps, use_container_width=True)
 
-# --- Tab 4: Safety & Governance ---
-with tabs[3]:
+# --- Tab 5: Safety & Governance ---
+with tabs[4]:
     st.header("Safety, Alignment & Governance")
     
     col_safe, col_audit = st.columns([1, 2])
@@ -246,8 +310,8 @@ with tabs[3]:
     else:
         st.info("No proposals pending human review.")
 
-# --- Tab 5: Interaction & Traces ---
-with tabs[4]:
+# --- Tab 6: Interaction & Traces ---
+with tabs[5]:
     st.header("Interaction & Meta-Cognition")
     
     # Filters
