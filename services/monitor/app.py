@@ -60,6 +60,7 @@ tabs = st.tabs([
     "🧠 Cognitive Engine",     # 1. Core Cognitive (Memory, Knowledge)
     "📚 Knowledge Base (RAG)", # RAG System
     "🧬 Self-Reprogramming",   # 2. Self-Reprogramming (Genome, Evolution, Strategy)
+    "🔁 Model Evolution",      # 6. Model Evolution (Training, Lineage)
     "🛡️ Safety & Governance",  # 4. Safety (Immutable Core, Audit)
     "💬 Interaction & Traces", # 3. Interaction & 5. Meta-Cognition (Traces, Analysis)
 ])
@@ -273,8 +274,131 @@ with tabs[3]:
         exps = get_data("SELECT id, status, result_summary, created_at FROM experiments ORDER BY created_at DESC LIMIT 10")
         st.dataframe(exps, use_container_width=True)
 
-# --- Tab 5: Safety & Governance ---
+# --- Tab 5: Model Evolution ---
 with tabs[4]:
+    st.header("🔁 Model Evolution")
+    
+    # 1. Active & Recent Training Runs
+    st.subheader("Training Runs")
+    
+    # Filters
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        status_filter = st.multiselect("Status", ["pending", "running", "failed", "completed"], default=["running", "completed"])
+    with col_f2:
+        target_filter = st.text_input("Target Name (e.g. tm-v*)", "")
+        
+    query = """
+        SELECT id, base_model, target_name, status, created_at, metrics, model_version_id 
+        FROM training_runs 
+        WHERE 1=1
+    """
+    params = {}
+    if status_filter:
+        query += " AND status IN %(status)s"
+        params['status'] = tuple(status_filter)
+    if target_filter:
+        query += " AND target_name LIKE %(target)s"
+        params['target'] = f"%{target_filter}%"
+        
+    query += " ORDER BY created_at DESC LIMIT 50"
+    
+    runs_df = get_data(query, params)
+    
+    if not runs_df.empty:
+        # Flatten metrics for display
+        runs_df['train_loss'] = runs_df['metrics'].apply(lambda x: x.get('train_loss') if x else None)
+        runs_df['perf_score'] = runs_df['metrics'].apply(lambda x: x.get('performance_score') if x else None)
+        
+        # Display table
+        st.dataframe(
+            runs_df[['id', 'base_model', 'target_name', 'status', 'created_at', 'train_loss', 'perf_score']],
+            use_container_width=True
+        )
+        
+        # Detail view
+        selected_run_id = st.selectbox("Select Run for Details", runs_df['id'].tolist())
+        if selected_run_id:
+            run_details = runs_df[runs_df['id'] == selected_run_id].iloc[0]
+            st.json(run_details['metrics'])
+            if run_details['model_version_id']:
+                st.success(f"Generated Model Version: {run_details['model_version_id']}")
+    else:
+        st.info("No training runs found matching criteria.")
+        
+    st.divider()
+    
+    # 2. Model Versions & Scores
+    st.subheader("Model Zoo")
+    
+    models_df = get_data("""
+        SELECT name, base_model, status, performance_score, created_at, id 
+        FROM model_versions 
+        ORDER BY created_at DESC
+    """)
+    
+    if not models_df.empty:
+        col_zoo, col_chart = st.columns([2, 1])
+        
+        with col_zoo:
+            st.dataframe(models_df, use_container_width=True)
+            
+        with col_chart:
+            if models_df['performance_score'].notnull().any():
+                fig = px.bar(models_df, x='name', y='performance_score', title="Model Performance", color='status')
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.caption("No performance scores available yet.")
+                
+        # Actions
+        st.markdown("#### Actions")
+        sel_model = st.selectbox("Select Model", models_df['name'].tolist())
+        if st.button(f"Set {sel_model} as Active"):
+            # Placeholder for API call
+            st.warning("API integration pending for 'Set Active'")
+    else:
+        st.info("No models registered in the zoo.")
+        
+    st.divider()
+    
+    # 3. Lineage Inspector
+    st.subheader("Lineage Inspector")
+    
+    if not models_df.empty:
+        inspect_model = st.selectbox("Inspect Model Lineage", models_df['name'].tolist(), key="lineage_sel")
+        model_row = models_df[models_df['name'] == inspect_model].iloc[0]
+        
+        # Fetch training run
+        tr_run = get_data("SELECT * FROM training_runs WHERE model_version_id = %s", params={'mid': model_row['id']})
+        
+        col_l1, col_l2, col_l3 = st.columns(3)
+        
+        with col_l1:
+            st.markdown("### 1. Model")
+            st.write(f"**Name:** {model_row['name']}")
+            st.write(f"**Base:** {model_row['base_model']}")
+            st.write(f"**Status:** {model_row['status']}")
+            
+        with col_l2:
+            st.markdown("### 2. Training")
+            if not tr_run.empty:
+                tr = tr_run.iloc[0]
+                st.write(f"**Run ID:** {tr['id']}")
+                st.write(f"**Dataset:** {tr['dataset_path']}")
+                st.json(tr['metrics'])
+            else:
+                st.warning("No linked training run found.")
+                
+        with col_l3:
+            st.markdown("### 3. Experiments")
+            # Placeholder query for experiments linked to this model
+            st.caption("Experiments linking logic pending...")
+            
+    else:
+        st.info("Populate Model Zoo to inspect lineage.")
+
+# --- Tab 6: Safety & Governance ---
+with tabs[5]:
     st.header("Safety, Alignment & Governance")
     
     col_safe, col_audit = st.columns([1, 2])

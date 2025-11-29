@@ -391,6 +391,74 @@ accelerate launch --config_file configs/accelerate/accelerate_single_gpu.yaml tr
 accelerate launch --config_file configs/accelerate/accelerate_single_gpu_deepspeed.yaml train_tm_model.py --run-id <RUN_ID>
 ```
 
+### 📓 Training Logs
+
+Every LoRA training run is tracked in the database and on disk.
+
+#### Database
+
+The `training_runs` table contains:
+
+- `id` – training run ID (UUID)
+- `base_model` – model being fine-tuned (e.g. `qwen-32b-instruct`)
+- `target_name` – logical name (e.g. `tm-v2`)
+- `status` – `pending`, `running`, `failed`, `completed`
+- `dataset_path` – path to the JSONL distillation dataset
+- `metrics` – JSON field with training metrics (e.g. `train_loss`, `performance_score`)
+- `logs_path` – where detailed logs are stored on disk
+- `model_version_id` – link to the resulting `model_versions` row (if completed)
+
+You can inspect a run via the Admin API:
+
+```bash
+curl http://localhost:8080/admin/training-runs/<TRAINING_RUN_ID>
+```
+
+Example response:
+```json
+{
+  "id": "a3f8e0a8-...",
+  "base_model": "qwen-32b-instruct",
+  "target_name": "tm-v2",
+  "status": "completed",
+  "dataset_path": "data/distill/tm_v2_train.jsonl",
+  "logs_path": "models/tm-v2/training_log.json",
+  "metrics": {
+    "train_loss": 0.89,
+    "performance_score": -0.89
+  },
+  "model_version_id": "c0ffee-..."
+}
+```
+
+#### On Disk
+
+The training worker (`train_tm_model.py`) saves artifacts under `models/<target_name>/`:
+
+- LoRA adapter weights
+- Tokenizer
+- Optional JSON log file (e.g. `training_log.json`)
+
+Typical layout:
+```text
+models/
+  tm-v2/
+    adapter_config.json
+    adapter_model.bin
+    tokenizer.json
+    tokenizer_config.json
+    special_tokens_map.json
+    training_log.json
+```
+
+You can inspect:
+```bash
+cat models/tm-v2/training_log.json | jq
+```
+to see raw metrics, runtime info, or debug details.
+
+Together, `training_runs` + `model_versions` + the files in `models/<target_name>/` give you a fully auditable history of how each new model generation was trained.
+
 ### 🚧 In Progress
 - **Real Safety Guard** (currently placeholder) - Advanced safety validation logic
 - **Skill Evolution** (code-level mutations) - Automatic code generation and testing
