@@ -41,12 +41,12 @@ docker-compose.override.yml
 # Project Specific
 infra/env/*.env
 !infra/env/.gitkeep
-data/postgres/
-data/vector_db/
-data/logs/
-data/traces/
-data/checkpoints/
-data/datasets/
+# data/postgres/  <-- Commented out to allow upload
+# data/vector_db/ <-- Commented out to allow upload
+# data/logs/      <-- Commented out to allow upload
+# data/traces/    <-- Commented out to allow upload
+# data/checkpoints/ <-- Commented out to allow upload
+# data/datasets/  <-- Commented out to allow upload
 
 # OS
 .DS_Store

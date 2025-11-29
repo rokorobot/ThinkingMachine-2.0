@@ -31,6 +31,33 @@ CREATE INDEX IF NOT EXISTS idx_user_memories_embedding
 ALTER TABLE traces
   ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
 
+-- High-level document metadata for knowledge base
+CREATE TABLE IF NOT EXISTS knowledge_documents (
+  id           BIGSERIAL PRIMARY KEY,
+  source       TEXT NOT NULL,           -- e.g. 'local_corpus', 'manual_upload', 'web_capture'
+  uri          TEXT NOT NULL,           -- absolute file path, URL, or logical ID
+  title        TEXT,
+  doc_type     TEXT,                    -- 'pdf','txt','md',...
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  metadata     JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+-- Chunk-level embeddings (pgvector)
+CREATE TABLE IF NOT EXISTS knowledge_chunks (
+  id             BIGSERIAL PRIMARY KEY,
+  document_id    BIGINT NOT NULL REFERENCES knowledge_documents(id) ON DELETE CASCADE,
+  chunk_index    INT NOT NULL,
+  content        TEXT NOT NULL,
+  embedding      VECTOR(1536),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_doc_id
+  ON knowledge_chunks(document_id);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_embedding
+  ON knowledge_chunks
+  USING ivfflat (embedding vector_cosine_ops);
 
 -- 1. Policy Versions
 CREATE TABLE policy_versions (

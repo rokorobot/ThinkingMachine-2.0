@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from services.api_gateway.routers import admin
+from services.api_gateway.routers import admin, knowledge
 from services.core_agent.core_agent import handle_task  # existing
 
 from pydantic import BaseModel
@@ -47,5 +47,6 @@ def submit_task(req: TaskRequest):
 def health():
     return {"status": "ok"}
 
-# Mount admin/game-theory endpoints
+# Mount admin endpoints
 app.include_router(admin.router)
+app.include_router(knowledge.router)
